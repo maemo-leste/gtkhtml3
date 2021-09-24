@@ -1,0 +1,22 @@
+Source: gtkhtml3.14
+Section: libs
+Priority: optional
+Maintainer: Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>
+Build-Depends: debhelper (>= 10), libgtk2.0-dev (>= 2:2.12), libgconf2-dev, intltool
+Standards-Version: 4.3.0
+
+Package: gtkhtml3.14-dev
+Section: devel
+Architecture: any
+Multi-arch: same
+Depends: gtkhtml3.14 (= ${binary:Version})
+Description: Development files for GtkHTML without Gnome dependencies
+ Development files for GtkHTML without Gnome dependencies
+
+Package: gtkhtml3.14
+Section: libs
+Multi-arch: same
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: GtkHTML shared library without Gnome dependencies
+ GtkHTML shared library without Gnome dependencies

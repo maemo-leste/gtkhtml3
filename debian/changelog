@@ -1,0 +1,484 @@
+gtkhtml3.14 (3.24.4-leste1) unstable; urgency=low
+
+  * Initial leste port
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Fri, 24 Sep 2021 21:24:23 +0300
+
+gtkhtml3.14 (3.24.4-osso20+0m5) unstable; urgency=low
+
+  * This entry has been added by BIFH queue processor
+    version has been changed to 3.24.4-osso20+0m5
+
+ -- Gary Birkett <ext-gary.2.birkett@nokia.com>  Mon, 14 Jun 2010 16:48:27 +0300
+
+gtkhtml3.14 (3.24.4-osso20) unstable; urgency=low
+
+  [ Xabier Rodriguez Calvar ]
+  * gtkhtml_620_set_default_animate_false.diff: Set default animate FALSE
+  * gtkhtml_621_improved_animations_and_images_management.diff: Improved
+    animations and images management.
+    We do not load animations if animate is FALSE and we just use the
+    regular pixbuf.
+    Fixes: NB#149979
+
+  [ Claudio Saavedra ]
+  * Merge Xabier's branch.
+ 
+ -- Claudio Saavedra <csaavedra@igalia.com>  Wed, 02 Jun 2010 13:53:27 +0300
+
+gtkhtml3.14 (3.24.4-osso19) unstable; urgency=low
+
+  * Disable cast checks for non-debug builds.
+    Fixes: NB#162947 (gtkhtml recompilation with G_DISABLE_CAST_CHECK)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Thu, 01 Apr 2010 14:46:31 +0300
+
+gtkhtml3.14 (3.24.4-osso18) unstable; urgency=low
+
+  * gtkhtml_600_sanitize_utf8.patch: Sanitize utf8 in a proper manner.
+  Based on patch by Xabier Rodriguez Calvar.
+  Fixes: NB#156020 (Horrible decoding of Danish emails)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Mon, 22 Feb 2010 16:13:28 +0200
+
+gtkhtml3.14 (3.24.4-osso17) unstable; urgency=low
+
+  * Remove the changelog and other doc files from the library package.
+    Fixes: NB#149129 (Remove doc files from gtkhtml deb)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Fri, 08 Jan 2010 15:39:37 +0200
+
+gtkhtml3.14 (3.24.4-osso16) unstable; urgency=low
+
+  * gtkhtml_500_selection_with_hildon_pannable_area.diff:
+    Added support to properly select when pressing shift key and the
+    widget is inside a pannable area.
+    Fixes: NB#139107 (Panning and selecting are mutually exclusive)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Wed, 16 Dec 2009 11:00:26 +0200
+
+gtkhtml3.14 (3.24.4-osso15) unstable; urgency=low
+
+  * gtkhtml_420_set_word_char_wrapping.diff
+    Added: new gtk_html_set_word_chap_wrapping API. Patch by José Dapena Paz.
+    Fixes: NB#134905 (ASCII mails dont wrap around in UI)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Fri, 11 Sep 2009 14:41:29 +0300
+
+gtkhtml3.14 (3.24.4-osso14) unstable; urgency=low
+
+  * gtkhtml_410_no_link_click_on_panning.diff
+    Updated. Patch by José Dapena Paz.
+    Fixes: NB#119400 (Dragging over image link opens the link in browser)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Wed, 09 Sep 2009 15:27:51 +0300
+
+gtkhtml3.14 (3.24.4-osso13) unstable; urgency=low
+
+  * gtkhtml_410_no_link_click_on_panning.diff
+    Keep track of accumulated movement during panning to avoid spurious
+    clicks on panning. Patch by José Dapena Paz.
+    Fixes: NB#119400 (Dragging over image link opens the link in browser)
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Wed, 02 Sep 2009 15:07:15 +0300
+
+gtkhtml3.14 (3.24.4-osso12) unstable; urgency=low
+
+  * gtkhtml_400_configure_custom_panning.diff
+    - Call html_engine_set_focus_object on the press event, previously
+      not called if you are not on auto-panning mode
+    Fixes: NB#134276 (URL link not highlighted when pressed)
+
+ -- Alejandro Pinheiro <apinheiro@igalia.com>  Fri, 21 Aug 2009 14:02:12 +0200
+
+gtkhtml3.14 (3.24.4-osso11) unstable; urgency=low
+
+  * gtkhtml_400_configure_custom_panning.diff
+    - Customize the panning feature on gtkhtml
+    Fixes: NB#113458 (CSM missing for links received in mail)
+
+ -- Alejandro Pinheiro <apinheiro@igalia.com>  Mon, 10 Aug 2009 18:09:57 +0200
+
+gtkhtml3.14 (3.24.4-osso10) unstable; urgency=low
+
+  * gtkhtml_340_gdk_threads.diff:
+    - Use gdk_threads_add_idle/timeout() to make the GtkHTML threadsafe.
+    Fixes: NB#128906 (Crash in html_draw_queue_flush () / idle_handler ())
+
+ -- Claudio Saavedra <csaavedra@igalia.com>  Wed, 29 Jul 2009 19:19:48 +0200
+
+gtkhtml3.14 (3.24.4-osso9) unstable; urgency=low
+
+  * gtkhtml_290_set_image_max_size.diff:
+    - Do not resize image when rendering cancelled
+    - do nothing when factory gone; maybe the message drawing has been
+    cancelled
+  * Fixes: NB#111881 - Modest sometimes after closing a viewer and starting to
+    scroll the messages view
+
+ -- David Kedves <kedazo@gmail.com>  Mon, 27 Apr 2009 14:49:57 +0200
+
+gtkhtml3.14 (3.24.4-osso8) unstable; urgency=low
+
+  * Fixes: NB#110429 - Modest crashed once when cancelling "Move to folder"
+    dialog, navigating to messages view and trying to scroll the view
+
+ -- David Kedves <kedazo@gmail.com>  Wed, 15 Apr 2009 12:05:30 +0200
+
+gtkhtml3.14 (3.24.4-osso7) unstable; urgency=low
+
+  * Added patch: gtkhtml_330_char_encoding_support.diff         
+  * Backported proper content-type handling from svn.gnome.org
+    You should call gtk_html_set_default_engine (html, TRUE);
+    if you want proper character encoding conversion.
+  * Fixes: NB#110349
+
+ -- David Kedves <kedazo@gmail.com>  Tue, 14 Apr 2009 13:37:32 +0200
+
+gtkhtml3.14 (3.24.4-osso6) unstable; urgency=low
+
+  * Added patch: gtkhtml_320_dnd_disable_api.diff
+  * New API function: gtk_html_set_allow_dnd (GtkHTML *self, gboolean allowed)
+  * Fixes: NB#110127 - Randomly modest crashed when attempt to access the
+    message from Inbox
+  * Fixes: NB#110644 - Once modest crashed immediately after closing a message
+    viewer
+
+ -- David Kedves <kedazo@gmail.com>  Tue, 14 Apr 2009 10:18:37 +0200
+
+gtkhtml3.14 (3.24.4-osso5) unstable; urgency=low
+
+  * Added patch: gtkhtml_300_coverity_findings.diff
+  * Fixes: NB#109456 - Coverity findings in gtkhtml
+  * Added some workarounds to avoid crashes like NB#110429 
+
+ -- David Kedves <kedazo@gmail.com>  Thu, 09 Apr 2009 13:50:39 +0200
+
+gtkhtml3.14 (3.24.4-osso4) unstable; urgency=low
+
+  * gtkhtml_290_set_image_max_size.diff:
+  - Use GdkPixbuf instead of GdkPixbufAnimation for rescaled
+    images due to GTK+ limitation (gdk_pixbuf_loader_set_size)
+  - Only rescale images which bigger than max size,
+    (this preserve small animations)
+  * Fixes: NB#107923 -  Device reboots when attempt to open a message with
+    certain image inserted to message body from sent folder .
+
+ -- David Kedves <kedazo@gmail.com>  Tue, 07 Apr 2009 04:36:44 +0200
+
+gtkhtml3.14 (3.24.4-osso3) unstable; urgency=low
+
+  * Added API:
+    void gtk_html_set_max_image_size (GtkHTML *html, gint width, gint height);
+  * Fixes: NB#107923 -  Device reboots when attempt to open a message with
+    certain image inserted to message body from sent folder .
+
+ -- David Kedves <kedazo@gmail.com>  Wed, 01 Apr 2009 12:09:08 +0200
+
+gtkhtml3.14 (3.24.4-osso2) unstable; urgency=low
+
+  * Added some pointer validation in pop_element_by_type 
+  * Fixes: NB#102434 - rss application crashed
+
+ -- David Kedves <kedazo@gmail.com>  Fri, 20 Mar 2009 08:56:15 +0100
+
+gtkhtml3.14 (3.24.4-osso1) unstable; urgency=low
+
+  * Updated upstream version to 3.24.4
+  * gtkhtml/gtkhtml.c:
+    - gtk_html_begin_content: fixed content_type handling
+
+ -- David Kedves <kedazo@gmail.com>  Mon, 02 Mar 2009 11:21:28 +0100
+
+gtkhtml3.14 (3.24.0-osso7) unstable; urgency=low
+
+  * Renaming package to gtkhtml3.14 
+
+ -- David Kedves <kedazo@gmail.com>  Wed, 21 Jan 2009 17:20:48 +0100
+
+gtkhtml (3.24.0-osso6) unstable; urgency=low
+
+  * Retagged
+
+ -- Karoliina Salminen <karoliina.t.salminen@nokia.com>  Tue, 09 Dec 2008 10:40:07 +0200
+
+gtkhtml (3.24.0-osso5) unstable; urgency=low
+
+  * Fixed intrepid->unstable in debian/changelog
+
+ -- Karoliina Salminen <karoliina.t.salminen@nokia.com>  Tue, 09 Dec 2008 10:37:34 +0200
+
+gtkhtml (3.24.0-osso4) unstable; urgency=low
+
+  * Retagged to fix NB#94759 gtkhtml0 package shall be recompiled to reduce SIGILL probability
+
+ -- Karoliina Salminen <karoliina.t.salminen@nokia.com>  Tue, 09 Dec 2008 10:23:31 +0200
+
+gtkhtml (3.24.0-osso3) unstable; urgency=low
+
+  * Completely removed libart dependency
+
+ -- David Kedves <kedazo@gmail.com>  Wed, 12 Nov 2008 12:43:09 +0100
+
+gtkhtml (3.24.0-osso2) unstable; urgency=low
+
+  * Dropped DOLT from configure.in, this solves compiling on i386 target
+
+ -- David Kedves <kedazo@gmail.com>  Wed, 05 Nov 2008 10:35:12 +0100
+
+gtkhtml (3.24.0-osso1) unstable; urgency=low
+
+  * Version: 3.24.0
+  * New version from gnome.org
+
+ -- David Kedves <kedazo@gmail.com>  Wed, 15 Oct 2008 14:21:02 +0200
+
+gtkhtml (3.13.91-3osso15) unstable; urgency=low
+
+  * Plug leak in htmlengine.c based on patch from Olev Kartau
+  * Fixes: NB#79361
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Fri,  4 Apr 2008 13:19:24 +0300
+
+gtkhtml (3.9.1-3osso13) unstable; urgency=low
+
+  * Replace substring search with UTF-8-aware upstream version
+  * Fixes: NB#75033
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Fri,  9 Nov 2007 15:47:03 +0200
+
+gtkhtml (3.9.1-3osso12) unstable; urgency=low
+
+  * Back out of regex search and report FALSE if regcomp fails
+  * Fixes: NB#64191, NB#64261
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue, 31 Jul 2007 14:57:12 +0300
+
+gtkhtml (3.9.1-3osso11) unstable; urgency=low
+
+  * Added patch from Jose Dapena Paz for exporting last search selected area
+  * Fixes: NB#61549
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon,  2 Jul 2007 15:57:31 +0300
+
+gtkhtml (3.9.1-3osso10) unstable; urgency=low
+
+  * Added patch to remove instances where libart_lgpl headers are being included
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 30 May 2007 23:10:13 +0300
+
+gtkhtml (3.9.1-3osso9) unstable; urgency=low
+
+  * Added API for programmatically setting a link as visited
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed,  9 May 2007 19:47:01 +0300
+
+gtkhtml (3.9.1-3osso8) unstable; urgency=low
+
+  * Removed gtkhtml_000_memleak_fix.diff, because it was already upstream, and
+    thus resulted in a double free
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 16 Apr 2007 16:43:13 +0300
+
+gtkhtml (3.9.1-3osso7) unstable; urgency=low
+
+  * Forgot to add soft-a11y-check patch
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  3 Apr 2007 15:32:47 +0300
+
+gtkhtml (3.9.1-3osso6) unstable; urgency=low
+
+  * Added patch comments
+  * Removed empty debian/patches
+  * Added --enable-a11y, but with forgiving gail check
+  * Increased GTK+ dependency to 2.10.0
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  3 Apr 2007 12:08:10 +0300
+
+gtkhtml (3.9.1-3osso5) unstable; urgency=low
+
+  * Fixes: NB#52411
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  6 Mar 2007 19:42:39 +0200
+
+gtkhtml (3.9.1-3osso4) unstable; urgency=low
+
+  * Added -fPIC -DPIC to the CFLAGS
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  6 Mar 2007 18:26:26 +0200
+
+gtkhtml (3.9.1-3osso3) unstable; urgency=low
+
+  * Removed dependency on libxml-parser-perl
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 26 Feb 2007 18:06:24 +0200
+
+gtkhtml (3.9.1-3osso2) unstable; urgency=low
+
+  * Added dependency on libxml-parser-perl
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 26 Feb 2007 17:59:33 +0200
+
+gtkhtml (3.9.1-3osso1) unstable; urgency=low
+
+  * Major changes: Moved to gtkhtml-3.13.91
+  * Fixed: Stale htmlengine->focus_object pointer being carried over across
+    gtk_html_load_empty
+  * Reorganized patch application system to use numbered patches
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue, 20 Feb 2007 18:58:33 +0200
+
+gtkhtml (3.9.1-3osso0) unstable; urgency=low
+
+  * Moved trunk to sardine-experimental. New patch properly frees Pango structures
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Wed, 14 Feb 2007 14:29:13 +0200
+
+gtkhtml (3.9.1-2osso16) unstable; urgency=low
+
+  * During button_press_event, we must record the starting (x,y) of the pan using
+    gdk_window_get_pointer + gtk_adjustment_get_value from the two adjustments
+  * We must compare the absolute value of the "total" pan, not the value itself
+  * gtk_html_private_calc_scrollbars allows page_size > upper - lower ... fixed
+  * Fixed NB#50763
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  6 Feb 2007 18:39:38 +0200
+
+gtkhtml (3.9.1-2osso15) unstable; urgency=low
+
+  * When grabbing the page by a link for panning purposes, don't follow the link
+    upon button release.
+  * Fixes: NB#50763
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 29 Jan 2007 17:53:03 +0200
+
+gtkhtml (3.9.1-2osso14) unstable; urgency=low
+
+  * Determine double-click distance tolerance via GtkSettings, not hardcoded value
+  * Fixes: NB#50744
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Mon, 22 Jan 2007 12:59:43 +0200
+
+gtkhtml (3.9.1-2osso13) unstable; urgency=low
+
+  * htmlengine.c:insert_text: Improved space-eating algorithm
+  * Fixes: NB#32523
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Thu, 11 Jan 2007 13:16:34 +0200
+
+gtkhtml (3.9.1-2osso12) unstable; urgency=low
+
+  * Added panning fix for broken ext events
+  * Fixes: NB#48890
+
+ -- Gabriel Schulhof <gabriel.schulhof@nokia.com>  Tue,  5 Dec 2006 11:24:01 +0200
+
+gtkhtml (3.9.1-2osso11) unstable; urgency=low
+
+  * Unrealize fix - added gtkhtml_unrealize_fix.diff
+  * Scale images with text - added gtkhtml_image_magnification.diff
+  * Fixes: NB#46236, NB#47404
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Mon, 27 Nov 2006 12:30:44 +0200
+
+gtkhtml (3.9.1-2osso10) unstable; urgency=low
+
+  * Updated the IM leak patch to protect from recurrent freeing
+  * Fixes: NB#47494
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Mon, 20 Nov 2006 15:13:19 +0200
+
+gtkhtml (3.9.1-2osso9) unstable; urgency=low
+
+  * Updated the license references in Nokia patches to reflect the main
+    package lincese better. Fixes: NB#40234
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Tue, 31 Oct 2006 11:29:06 +0200
+
+gtkhtml (3.9.1-2osso8) unstable; urgency=low
+
+  * Fixes: NB#40234: Removed source files with GPL license. Copied source
+    files from version 3.13.1 with LGPL license.
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Fri, 20 Oct 2006 17:10:08 +0300
+
+gtkhtml (3.9.1-2osso7) unstable; urgency=low
+
+  * Fixes: NB#23889: adding const and static keywords
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Tue, 10 Oct 2006 15:13:49 +0300
+
+gtkhtml (3.9.1-2osso6) unstable; urgency=low
+
+  * Fixes: NB#41532
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Wed, 27 Sep 2006 15:02:41 +0300
+
+gtkhtml (3.9.1-2osso5) unstable; urgency=low
+
+  * Added a dbg package
+  * Fixes : NB#33770, NB#39675, NB#40235
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Mon, 18 Sep 2006 11:05:27 +0300
+
+gtkhtml (3.9.1-2osso4) unstable; urgency=low
+
+  * Bugfixes
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Mon, 28 Aug 2006 09:25:55 +0300
+
+gtkhtml (3.9.1-2osso3) unstable; urgency=low
+
+  * Added Section to the source package
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Fri,  7 Jul 2006 10:36:00 +0300
+
+gtkhtml (3.9.1-2osso2) unstable; urgency=low
+
+  * Bugfix NB#32924, NB#33185
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Mon, 19 Jun 2006 13:38:51 +0300
+
+gtkhtml (3.9.1-2osso1) unstable; urgency=low
+
+  * Update (removing .la from -dev package)
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Tue, 30 May 2006 13:26:15 +0300
+
+gtkhtml (3.9.1-1osso6) unstable; urgency=low
+
+  * Bugfix
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Mon, 29 May 2006 15:32:24 +0300
+
+gtkhtml (3.9.1-1osso5) unstable; urgency=low
+
+  * Bugfix
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Thu, 11 May 2006 15:42:20 +0300
+
+gtkhtml (3.9.1-1osso4) unstable; urgency=low
+
+  * Bugfixes
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Tue,  9 May 2006 12:53:58 +0300
+
+gtkhtml (3.9.1-1osso3) unstable; urgency=low
+
+  * Fixes
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Thu, 26 Jan 2006 11:27:13 +0200
+
+
+gtkhtml (3.9.1-1osso2) unstable; urgency=low
+
+  * Fixes
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Tue, 24 Jan 2006 14:37:39 +0200
+
+gtkhtml (3.9.1-1osso1) unstable; urgency=low
+
+  * Initial release
+
+ -- Jakub Pavelek <jakub.pavelek@nokia.com>  Fri, 23 Dec 2005 13:29:48 +0200
+

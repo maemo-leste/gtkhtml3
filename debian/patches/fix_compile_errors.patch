@@ -1,0 +1,51 @@
+Index: gtkhtml3/gtkhtml/htmlclueflow.c
+===================================================================
+--- gtkhtml3.orig/gtkhtml/htmlclueflow.c
++++ gtkhtml3/gtkhtml/htmlclueflow.c
+@@ -1687,7 +1687,7 @@ write_flow_tag (HTMLClueFlow *self, HTML
+ 		char *p_str = get_p_str (self, state);
+ 
+ 		if (p_str) {
+-			if (! html_engine_save_output_string (state, p_str))
++			if (! html_engine_save_output_string (state, "%s", p_str))
+ 				return FALSE;
+ 		}
+ 	}
+@@ -1738,13 +1738,13 @@ write_flow_tag (HTMLClueFlow *self, HTML
+ 
+ 	if (is_item (self)) {
+ 		if (next && is_levels_equal (self, next) && !is_item (next) && !html_clueflow_contains_table (self)) {
+-			if (!html_engine_save_output_string (state, br_str))
++			if (!html_engine_save_output_string (state, "%s", br_str))
+ 				return FALSE;
+ 		} else if (!html_engine_save_output_string (state, "\n"))
+ 			return FALSE;
+ 	} else if (is_levels_equal (self, next) && self->style == next->style) {
+ 		if (self->style != HTML_CLUEFLOW_STYLE_PRE && !html_clueflow_contains_table (self)) {
+-			if (!html_engine_save_output_string (state, br_str))
++			if (!html_engine_save_output_string (state, "%s", br_str))
+ 				return FALSE;
+ 		} else {
+ 			if (!html_engine_save_output_string (state, "\n"))
+@@ -1755,7 +1755,7 @@ write_flow_tag (HTMLClueFlow *self, HTML
+ 
+ 		if (self->style != HTML_CLUEFLOW_STYLE_PRE) {
+ 			if ((!html_clueflow_contains_table (self) && !end && next && self->style == next->style) || html_clueflow_is_empty (self)) {
+-				if (!html_engine_save_output_string (state, br_str))
++				if (!html_engine_save_output_string (state, "%s", br_str))
+ 					return FALSE;
+ 			} else {
+ 				if (!html_engine_save_output_string (state, "\n"))
+Index: gtkhtml3/gtkhtml/htmlsearch.c
+===================================================================
+--- gtkhtml3.orig/gtkhtml/htmlsearch.c
++++ gtkhtml3/gtkhtml/htmlsearch.c
+@@ -101,7 +101,7 @@ html_search_new (HTMLEngine *e, const gc
+ 		if (rv_int) {
+ 			char buf[1024];
+ 			if (regerror(rv_int, ns->reb, buf, sizeof(buf))) {
+-				g_warning (buf);
++				g_warning ("%s", buf);
+ 			} else {
+ 				g_warning ("regcomp failed, error code %d", rv_int);
+ 			}
