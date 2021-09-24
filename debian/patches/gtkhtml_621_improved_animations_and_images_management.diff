@@ -1,0 +1,101 @@
+From 5f6eacce34f3f72360ceb7911b39e919ba4d98a2 Mon Sep 17 00:00:00 2001
+From: Xabier Rodriguez Calvar <xrcalvar@igalia.com>
+Date: Thu, 18 Mar 2010 15:24:36 +0100
+Subject: [PATCH 2/2] Improved animations and images management.
+
+We do not load animations if animate is FALSE and we just use the
+regular pixbuf.
+
+Fixes: NB#149979
+---
+ gtkhtml/htmlimage.c |   61 +++++++++++++++++++++++++++++++-------------------
+ 1 files changed, 38 insertions(+), 23 deletions(-)
+
+diff --git a/gtkhtml/htmlimage.c b/gtkhtml/htmlimage.c
+index 7a2e930..a58a005 100644
+--- a/gtkhtml/htmlimage.c
++++ b/gtkhtml/htmlimage.c
+@@ -1131,26 +1131,47 @@ update_or_redraw (HTMLImagePointer *ip){
+ }
+ 
+ static void
++set_pixbuf_or_animation (HTMLImagePointer *ip)
++{
++	gboolean animate = FALSE;
++	GdkPixbufAnimation *animation = NULL;
++
++	g_return_if_fail (ip && ip->factory);
++
++	animation = gdk_pixbuf_loader_get_animation (ip->loader);
++
++	if (ip->factory->animate) {
++		animate = !gdk_pixbuf_animation_is_static_image (animation);
++	}
++
++	if (ip->animation) {
++		g_object_unref (ip->animation);
++		ip->animation = NULL;
++	}
++	if (ip->pixbuf) {
++		g_object_unref (ip->pixbuf);
++		ip->pixbuf = NULL;
++	}
++
++	if (animate) {
++		ip->animation = g_object_ref (animation);
++		html_image_pointer_start_animation (ip);
++	} else {
++		ip->pixbuf =
++			g_object_ref (gdk_pixbuf_loader_get_pixbuf (ip->loader));
++	}
++}
++
++static void
+ html_image_factory_end_pixbuf (GtkHTMLStream *stream,
+ 			       GtkHTMLStreamStatus status,
+ 			       gpointer user_data)
+ {
+ 	HTMLImagePointer *ip = user_data;
+ 
+-	gdk_pixbuf_loader_close (ip->loader, NULL);
+-
+-	if (ip->rescaled && !ip->pixbuf) {
+-    ip->pixbuf = gdk_pixbuf_loader_get_pixbuf (ip->loader);
+-
+-    if (ip->pixbuf)
+-      g_object_ref (ip->pixbuf);
+-  } else if (!ip->rescaled && !ip->animation) {
+-    ip->animation = gdk_pixbuf_loader_get_animation (ip->loader);
++	set_pixbuf_or_animation (ip);
+ 
+-    if (ip->animation)
+-	    g_object_ref (ip->animation);
+-	}
+-	html_image_pointer_start_animation (ip);
++	gdk_pixbuf_loader_close (ip->loader, NULL);
+ 
+ 	g_object_unref (ip->loader);
+ 	ip->loader = NULL;
+@@ -1254,16 +1275,10 @@ html_image_factory_area_updated (GdkPixbufLoader *loader, guint x, guint y, guin
+ static void
+ html_image_factory_area_prepared (GdkPixbufLoader *loader, HTMLImagePointer *ip)
+ {
+-  g_return_if_fail (ip && ip->factory);
+-  if (ip->rescaled && !ip->pixbuf) {
+-    ip->pixbuf = gdk_pixbuf_loader_get_pixbuf (loader);
+-    g_object_ref (ip->pixbuf);
+-	} else if (!ip->rescaled && !ip->animation) {
+-    ip->animation = gdk_pixbuf_loader_get_animation (loader);
+-		g_object_ref (ip->animation);
++	g_return_if_fail (ip && ip->factory);
++
++	set_pixbuf_or_animation (ip);
+ 
+-    html_image_pointer_start_animation (ip);
+-	}
+ 	update_or_redraw (ip);
+ }
+ 
+-- 
+1.7.0
+

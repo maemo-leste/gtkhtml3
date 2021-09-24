@@ -1,0 +1,156 @@
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml-private.h
++++ gtkhtml-3.24.4-before/gtkhtml/gtkhtml-private.h
+@@ -79,6 +79,8 @@ struct _GtkHTMLPrivate {
+ 	char *caret_first_focus_anchor;
+ 
+ 	gboolean allow_dnd;
++
++	gboolean auto_panning;
+ };
+ 
+ void  gtk_html_private_calc_scrollbars  (GtkHTML                *html,
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml.c
++++ gtkhtml-3.24.4-before/gtkhtml/gtkhtml.c
+@@ -1725,6 +1725,10 @@ motion_notify_event (GtkWidget *widget,
+ 	if (GTK_HTML (widget)->priv->dnd_in_progress)
+ 		return TRUE;
+ 
++	if (!GTK_HTML (widget)->priv->auto_panning) {
++		return FALSE;
++	}
++
+ 	widget = shift_to_iframe_parent (widget, &x, &y);
+ 
+ 	gdk_window_get_pointer (GTK_LAYOUT (widget)->bin_window, &x, &y, NULL);
+@@ -1902,12 +1906,20 @@ button_press_event (GtkWidget *widget,
+ 		case 1:
+ 			/*html->in_selection_drag = TRUE;*/
+ 			/* (TL 18-Nov-05) First click starts panning, not selection */
+-			html->in_selection_drag = FALSE;
+-			html->panning = TRUE;
+-			html->x_amount_panned =
+-			html->y_amount_panned = 0 ;
+-			html->lastx = xWnd + gtk_adjustment_get_value (gtk_layout_get_hadjustment (GTK_LAYOUT (widget)));
+-			html->lasty = yWnd + gtk_adjustment_get_value (gtk_layout_get_vadjustment (GTK_LAYOUT (widget)));
++			if (html->priv->auto_panning) {
++				GtkAdjustment *adjustment = NULL;
++				html->in_selection_drag = FALSE;
++				html->panning = TRUE;
++				html->x_amount_panned =
++				html->y_amount_panned = 0 ;
++				adjustment = gtk_layout_get_hadjustment (GTK_LAYOUT (widget));
++				html->lastx = xWnd + gtk_adjustment_get_value (adjustment);
++				adjustment = gtk_layout_get_vadjustment (GTK_LAYOUT (widget));
++				html->lasty = yWnd + gtk_adjustment_get_value (adjustment);
++			} else {
++				html->in_selection_drag = FALSE;
++				html->in_selection = FALSE;
++			}
+ 
+ 			if (html_engine_get_editable (engine)) {
+ 				HTMLObject *obj;
+@@ -1929,7 +1941,9 @@ button_press_event (GtkWidget *widget,
+ 					if (!(event->state & GDK_SHIFT_MASK)
+ 					    || (!engine->mark && event->state & GDK_SHIFT_MASK))
+ 						html_engine_set_mark (engine);
+-				html_engine_jump_at (engine, x, y);
++				if (html->priv->auto_panning) {
++					html_engine_jump_at (engine, x, y);
++				}
+ 			} else {
+ 				HTMLObject *obj;
+ 				HTMLEngine *orig_e;
+@@ -1952,7 +1966,7 @@ button_press_event (GtkWidget *widget,
+ 				if (event->state & GDK_SHIFT_MASK)
+ 					html_engine_select_region (engine,
+ 								   html->selection_x1, html->selection_y1, x, y);
+-				else {
++				else if (html->priv->auto_panning) {
+ 					html_engine_disable_selection (engine);
+ 					if (gdk_pointer_grab (GTK_LAYOUT (widget)->bin_window, FALSE,
+ 							      (GDK_BUTTON_RELEASE_MASK
+@@ -2081,20 +2095,26 @@ button_release_event (GtkWidget *initial_widget,
+ 			}
+ 		}
+ 
+-		html->x_amount_panned =
+-		html->y_amount_panned = 0 ;
++		if (html->priv->auto_panning) {
++			html->x_amount_panned =
++			html->y_amount_panned = 0 ;
+ 
+-		/* If it was a simple doubleclick select a word */
+-		if (html->simple_dblclick) {
+-		    html->simple_dblclick = FALSE;
+-		    gtk_html_select_word(html);
++			/* If it was a simple doubleclick select a word */
++			if (html->simple_dblclick) {
++				html->simple_dblclick = FALSE;
++				gtk_html_select_word(html);
++			}
+ 		}
+ 	}
+ 
+ 	html->in_selection = FALSE;
+ 	html->priv->in_object_resize = FALSE;
+ 
+-	return TRUE;
++	if (html->priv->auto_panning) {
++		return TRUE;
++	} else {
++		return FALSE; /* allow any possible pannable container to do their work */
++	}
+ }
+ 
+ static void
+@@ -3464,6 +3484,9 @@ gtk_html_init (GtkHTML* html)
+ 
+ 	html->priv->allow_dnd = TRUE;
+ 
++	/* Setting default value for auto_panning */
++	gtk_html_set_auto_panning (html, FALSE);
++
+ 	/* IM Context */
+ 	html->priv->im_context = gtk_im_multicontext_new ();
+ 	html->priv->need_im_reset = FALSE;
+@@ -3604,7 +3627,11 @@ gtk_html_allow_selection (GtkHTML *html,
+ 	g_return_if_fail (html != NULL);
+ 	g_return_if_fail (GTK_IS_HTML (html));
+ 
+-	html->allow_selection = allow;
++	if (html->priv->auto_panning == TRUE) {
++		html->allow_selection = allow;
++	} else {
++		g_debug ("When auto-panning is deactivate, no selection is allowed\n");
++	}
+ }
+ 
+ 
+@@ -6726,3 +6753,16 @@ main (int argc, char **argv)
+ }
+ 
+ #endif
++
++void gtk_html_set_auto_panning (GtkHTML *html, gboolean value)
++{
++	html->priv->auto_panning = value;
++	if (value == FALSE) {
++		html->allow_selection = FALSE;
++	}
++}
++
++gboolean gtk_html_get_auto_panning (GtkHTML *html)
++{
++	return html->priv->auto_panning;
++}
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml.h
++++ gtkhtml-3.24.4-before/gtkhtml/gtkhtml.h
+@@ -378,4 +378,8 @@ void			gtk_html_set_allow_dnd			(GtkHTML *html,
+ 
+ #endif
+ 
++/* Configure the custom panning */
++void	        gtk_html_set_auto_panning (GtkHTML *html, gboolean value);
++gboolean	gtk_html_get_auto_panning (GtkHTML *html);
++
+ #endif /* _GTKHTML_H_ */

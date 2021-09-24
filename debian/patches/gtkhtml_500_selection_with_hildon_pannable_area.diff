@@ -1,0 +1,217 @@
+diff --git a/gtkhtml/gtkhtml.c b/gtkhtml/gtkhtml.c
+index 29fcfa0..6f020c5 100644
+--- a/gtkhtml/gtkhtml.c
++++ b/gtkhtml/gtkhtml.c
+@@ -133,6 +133,8 @@ struct _ClipboardContents {
+ #define d_s(x)
+ #define D_IM(x)
+ 
++#define GTKHTML_DRAG_THRESHOLD 16.0
++
+ static GtkLayoutClass *parent_class = NULL;
+ 
+ static GConfClient *gconf_client = NULL;
+@@ -207,6 +209,11 @@ static void	gtk_html_adjust_cursor_position (GtkHTML *html);
+ /* Interval for scrolling during selection.  */
+ #define SCROLL_TIMEOUT_INTERVAL 10
+ 
++/* Minimum speed for scrolling during selection. When GtkHTML is
++   inside a pannable, selection is very slow when going down, so we
++   speed it up a bit with this limit */
++#define SCROLL_SPEED_THRESHOLD 28
++
+ /* Mouse move threshold for doubleclick check */
+ #define MOUSE_DBLCLK_THRESHOLD 10
+ 
+@@ -664,7 +671,9 @@ scroll_timeout_cb (gpointer data)
+ 			x = 0;
+ 	} else if (x >= widget->allocation.width) {
+ 		x_scroll = x - widget->allocation.width + 1;
+-		x = widget->allocation.width;
++		if (x_scroll < SCROLL_SPEED_THRESHOLD) {
++			x_scroll = SCROLL_SPEED_THRESHOLD;
++		}
+ 	} else {
+ 		x_scroll = 0;
+ 	}
+@@ -676,15 +685,19 @@ scroll_timeout_cb (gpointer data)
+ 			y = 0;
+ 	} else if (y >= widget->allocation.height) {
+ 		y_scroll = y - widget->allocation.height + 1;
+-		y = widget->allocation.height;
++		if (y_scroll < SCROLL_SPEED_THRESHOLD) {
++			y_scroll = SCROLL_SPEED_THRESHOLD;
++		}
+ 	} else {
+ 		y_scroll = 0;
+ 	}
+ 	y_scroll /= 2;
+ 
+-	if (html->in_selection && (x_scroll != 0 || y_scroll != 0))
++	if (html->in_selection && (x_scroll != 0 || y_scroll != 0)) {
+ 		html_engine_select_region (engine, html->selection_x1, html->selection_y1,
+ 					   x + engine->x_offset, y + engine->y_offset);
++		html_engine_flush_draw_queue(engine);
++	}
+ 
+ 	layout = GTK_LAYOUT (widget);
+ 
+@@ -1738,7 +1751,9 @@ motion_notify_event (GtkWidget *widget,
+ 	if (GTK_HTML (widget)->priv->dnd_in_progress)
+ 		return TRUE;
+ 
+-	if (!GTK_HTML (widget)->priv->auto_panning) {
++	if (!GTK_HTML (widget)->priv->auto_panning &&
++	    !GTK_HTML (widget)->in_selection &&
++	    !GTK_HTML (widget)->in_selection_drag) {
+ 		GtkAdjustment *adj;
+ 		html = GTK_HTML (widget);
+ 		adj = gtk_layout_get_hadjustment(GTK_LAYOUT(widget));
+@@ -1768,16 +1783,20 @@ motion_notify_event (GtkWidget *widget,
+ 		
+ 	    html->simple_dblclick = FALSE;
+ 	}
+-	
+-	if (!mouse_change_pos (widget, window, x, y, event->state))
+-		return FALSE;
++
++	if (html->priv->auto_panning) {
++		if (!mouse_change_pos (widget, window, x, y, event->state))
++			return FALSE;
++	} else if (mouse_change_pos (widget, window, x, y, event->state)) {
++		return TRUE;
++	}
+ 
+ 	engine = html->engine;
+ 	if (html->in_selection_drag && html_engine_get_editable (engine))
+ 		html_engine_jump_at (engine, x, y);
+ 
+ 	/* (TL 18-Nov-05) Added panning feature */
+-	if (html->panning) {
++	if (html->panning && html->priv->auto_panning) {
+ 		GtkAdjustment *adj;
+ 		gint dx, dy;
+ 		gdouble value;
+@@ -1942,8 +1961,14 @@ button_press_event (GtkWidget *widget,
+ 				html->lasty = yWnd + gtk_adjustment_get_value (adjustment);
+ 			} else {
+ 				GtkAdjustment *adjustment = NULL;
+-				html->in_selection_drag = FALSE;
+-				html->in_selection = FALSE;
++				if (html->allow_selection &&
++				    (event->state & GDK_SHIFT_MASK)) {
++					html->in_selection_drag = TRUE;
++					html->in_selection = TRUE;
++				} else {
++					html->in_selection_drag = FALSE;
++					html->in_selection = FALSE;
++				}
+ 				gdk_window_get_origin (widget->window, &(html->priv->last_root_x), &(html->priv->last_root_y));
+ 
+ 				html->priv->root_change_accum_x = 0;
+@@ -2003,20 +2028,8 @@ button_press_event (GtkWidget *widget,
+ 				}
+ 			}
+ 			if (html->allow_selection && !html->priv->in_object_resize) {
+-				if (event->state & GDK_SHIFT_MASK)
+-					html_engine_select_region (engine,
+-								   html->selection_x1, html->selection_y1, x, y);
+-				else if (html->priv->auto_panning) {
+-					html_engine_disable_selection (engine);
+-					if (gdk_pointer_grab (GTK_LAYOUT (widget)->bin_window, FALSE,
+-							      (GDK_BUTTON_RELEASE_MASK
+-							       | GDK_BUTTON_MOTION_MASK
+-							       | GDK_POINTER_MOTION_HINT_MASK),
+-							      NULL, NULL, event->time) == 0) {
+-						html->selection_x1 = x;
+-						html->selection_y1 = y;
+-					}
+-				}
++				html->selection_x1 = x;
++				html->selection_y1 = y;
+ 			}
+ 
+ 			engine->selection_mode = FALSE;
+@@ -2066,6 +2079,7 @@ button_release_event (GtkWidget *initial_widget,
+ 	gint x, y;
+ 	HTMLObject *focus_object;
+ 	gint focus_object_offset;
++	gboolean managed;
+ 
+ 	/* printf ("button_release_event\n"); */
+ 
+@@ -2081,7 +2095,7 @@ button_release_event (GtkWidget *initial_widget,
+ 	engine =  html->engine;
+ 
+ 	/* If it is a simple doubleclick don't allow the selection */
+-	if (html->in_selection && !html->simple_dblclick) {
++	if (html->in_selection && !html->simple_dblclick && x >= 0 && y >= 0) {
+ 		html_engine_update_selection_active_state (html->engine, html->priv->event_time);
+ 		if (html->in_selection_drag)
+ 			html_engine_select_region (engine, html->selection_x1, html->selection_y1,
+@@ -2089,7 +2103,10 @@ button_release_event (GtkWidget *initial_widget,
+ 		gtk_html_update_styles (html);
+ 		update_primary_selection (html);
+ 		queue_draw (html);
+-	}
++	} else if (fabs (html->selection_x1 - x) < GTKHTML_DRAG_THRESHOLD &&
++		   fabs (html->selection_y1 - y) < GTKHTML_DRAG_THRESHOLD) {
++		html_engine_disable_selection (engine);
++        }
+ 
+ 	if (event->button == 1) {
+ 	  guint mouse_double_click_threshold = MOUSE_DBLCLK_THRESHOLD ;
+@@ -2164,14 +2181,14 @@ button_release_event (GtkWidget *initial_widget,
+ 		}
+ 	}
+ 
++	/* Allow container to do the job if not in selection and not
++	   autopanning */
++	managed = html->priv->auto_panning || html->in_selection;
++
+ 	html->in_selection = FALSE;
+ 	html->priv->in_object_resize = FALSE;
+ 
+-	if (html->priv->auto_panning) {
+-		return TRUE;
+-	} else {
+-		return FALSE; /* allow any possible pannable container to do their work */
+-	}
++	return managed;
+ }
+ 
+ static void
+@@ -2795,7 +2812,7 @@ static gboolean
+ drag_motion (GtkWidget *widget, GdkDragContext *context, gint x, gint y, guint time)
+ {
+ 	if (!GTK_HTML (widget)->priv->allow_dnd)
+-		return;
++		return FALSE;
+ 
+ 	GdkWindow *window = widget->window;
+ 
+@@ -3687,10 +3704,10 @@ gtk_html_allow_selection (GtkHTML *html,
+ 	g_return_if_fail (html != NULL);
+ 	g_return_if_fail (GTK_IS_HTML (html));
+ 
+-	if (html->priv->auto_panning == TRUE) {
++	if (!html->priv->auto_panning) {
+ 		html->allow_selection = allow;
+-	} else {
+-		g_debug ("When auto-panning is deactivate, no selection is allowed\n");
++	} else if (allow) {
++		g_warning ("Autopanning disables selection");
+ 	}
+ }
+ 
+@@ -6817,8 +6834,9 @@ main (int argc, char **argv)
+ void gtk_html_set_auto_panning (GtkHTML *html, gboolean value)
+ {
+ 	html->priv->auto_panning = value;
+-	if (value == FALSE) {
++	if (html->priv->auto_panning && html->allow_selection) {
+ 		html->allow_selection = FALSE;
++		g_message ("Autopanning disables selection");
+ 	}
+ }
+ 

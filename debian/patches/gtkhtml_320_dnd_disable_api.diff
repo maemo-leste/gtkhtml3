@@ -1,0 +1,121 @@
+diff -ru gtkhtml-3.24.4/gtkhtml/gtkhtml.c gtkhtml-3.24.4-disable_dnd/gtkhtml/gtkhtml.c
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml.c	2009-04-14 10:01:00.000000000 +0200
++++ gtkhtml-3.24.4-disable_dnd/gtkhtml/gtkhtml.c	2009-04-14 10:16:58.000000000 +0200
+@@ -1101,6 +1101,9 @@
+ void
+ gtk_html_drag_dest_set (GtkHTML *html)
+ {
++	if (!html->priv->allow_dnd) /* Disable DnD when requested */
++		return;
++
+ 	if (html_engine_get_editable (html->engine))
+ 		gtk_drag_dest_set (GTK_WIDGET (html), GTK_DEST_DEFAULT_ALL,
+ 				   dnd_link_sources, DND_LINK_SOURCES, GDK_ACTION_COPY | GDK_ACTION_MOVE | GDK_ACTION_LINK);
+@@ -1303,6 +1306,9 @@
+ static void
+ dnd_link_set (GtkWidget *widget, HTMLObject *o, gint offset)
+ {
++	if (!GTK_HTML (widget)->priv->allow_dnd)
++		return;
++
+ 	if (!html_engine_get_editable (GTK_HTML (widget)->engine)) {
+ 		/* printf ("dnd_link_set %p\n", o); */
+ 
+@@ -1317,6 +1323,9 @@
+ static void
+ dnd_link_unset (GtkWidget *widget)
+ {
++	if (!GTK_HTML (widget)->priv->allow_dnd)
++		return;
++
+ 	if (!html_engine_get_editable (GTK_HTML (widget)->engine)) {
+ 		/* printf ("dnd_link_unset\n"); */
+ 
+@@ -2493,6 +2502,9 @@
+ static void
+ drag_begin (GtkWidget *widget, GdkDragContext *context)
+ {
++	if (!GTK_HTML (widget)->priv->allow_dnd)
++		return;
++
+ 	HTMLInterval *i;
+ 	HTMLObject *o;
+ 
+@@ -2515,6 +2527,9 @@
+ static void
+ drag_data_get (GtkWidget *widget, GdkDragContext *context, GtkSelectionData *selection_data, guint info, guint time)
+ {
++	if (!GTK_HTML (widget)->priv->allow_dnd)
++		return;
++
+ 	/* printf ("drag_data_get\n"); */
+ 	switch (info) {
+ 	case DND_TARGET_TYPE_MOZILLA_URL:
+@@ -2658,6 +2673,9 @@
+ drag_data_received (GtkWidget *widget, GdkDragContext *context,
+ 		    gint x, gint y, GtkSelectionData *selection_data, guint info, guint time)
+ {
++	if (!GTK_HTML (widget)->priv->allow_dnd)
++		return;
++
+ 	HTMLEngine *engine = GTK_HTML (widget)->engine;
+ 	gboolean pasted = FALSE;
+ 
+@@ -2706,6 +2724,9 @@
+ static gboolean
+ drag_motion (GtkWidget *widget, GdkDragContext *context, gint x, gint y, guint time)
+ {
++	if (!GTK_HTML (widget)->priv->allow_dnd)
++		return;
++
+ 	GdkWindow *window = widget->window;
+ 
+ 	if (!gtk_html_get_editable (GTK_HTML (widget)))
+@@ -3449,6 +3470,8 @@
+ 
+ 	html->priv->caret_first_focus_anchor = NULL;
+ 
++	html->priv->allow_dnd = TRUE;
++
+ 	/* IM Context */
+ 	html->priv->im_context = gtk_im_multicontext_new ();
+ 	html->priv->need_im_reset = FALSE;
+@@ -6147,6 +6170,13 @@
+ 	html_engine_set_max_image_size (html->engine, width, height);
+ }
+ 
++void
++gtk_html_set_allow_dnd (GtkHTML *html, gboolean allowed)
++{
++	g_assert (html && html->priv);
++	html->priv->allow_dnd = allowed;
++}
++
+ void 
+ gtk_html_set_allow_frameset (GtkHTML *html, gboolean allow)
+ {
+diff -ru gtkhtml-3.24.4/gtkhtml/gtkhtml.h gtkhtml-3.24.4-disable_dnd/gtkhtml/gtkhtml.h
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml.h	2009-04-14 10:01:00.000000000 +0200
++++ gtkhtml-3.24.4-disable_dnd/gtkhtml/gtkhtml.h	2009-04-14 10:16:59.000000000 +0200
+@@ -369,6 +369,9 @@
+ void               gtk_html_set_max_image_size                    (GtkHTML           *html,
+                                                                    gint width, gint height);
+ 
++void			gtk_html_set_allow_dnd			(GtkHTML *html,
++								 gboolean allowed);
++
+ #endif
+ 
+ #endif /* _GTKHTML_H_ */
+diff -ru gtkhtml-3.24.4/gtkhtml/gtkhtml-private.h gtkhtml-3.24.4-disable_dnd/gtkhtml/gtkhtml-private.h
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml-private.h	2008-10-13 10:31:38.000000000 +0200
++++ gtkhtml-3.24.4-disable_dnd/gtkhtml/gtkhtml-private.h	2009-04-14 10:11:04.000000000 +0200
+@@ -78,6 +78,8 @@
+ 	gboolean in_key_binding;
+ 
+ 	char *caret_first_focus_anchor;
++
++	gboolean allow_dnd;
+ };
+ 
+ void  gtk_html_private_calc_scrollbars  (GtkHTML                *html,

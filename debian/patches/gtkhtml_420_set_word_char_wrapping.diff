@@ -1,0 +1,176 @@
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4-panning/gtkhtml/gtkhtml-private.h gtkhtml-3.24.4-panning-and-wrap/gtkhtml/gtkhtml-private.h
+--- gtkhtml-3.24.4-panning/gtkhtml/gtkhtml-private.h	2009-09-07 12:19:10.000000000 +0200
++++ gtkhtml-3.24.4-panning-and-wrap/gtkhtml/gtkhtml-private.h	2009-09-08 14:28:01.000000000 +0200
+@@ -84,10 +84,12 @@
+ 
+ 	gint last_root_x;
+ 	gint last_root_y;
+ 	gint root_change_accum_x;
+ 	gint root_change_accum_y;
++
++	gboolean word_char_wrapping;
+ };
+ 
+ void  gtk_html_private_calc_scrollbars  (GtkHTML                *html,
+ 					 gboolean               *changed_x,
+ 					 gboolean               *changed_y);
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4-panning/gtkhtml/gtkhtml.c gtkhtml-3.24.4-panning-and-wrap/gtkhtml/gtkhtml.c
+--- gtkhtml-3.24.4-panning/gtkhtml/gtkhtml.c	2009-09-07 12:51:28.000000000 +0200
++++ gtkhtml-3.24.4-panning-and-wrap/gtkhtml/gtkhtml.c	2009-09-08 14:29:15.000000000 +0200
+@@ -3516,10 +3516,13 @@
+ 	html->priv->allow_dnd = TRUE;
+ 
+ 	/* Setting default value for auto_panning */
+ 	gtk_html_set_auto_panning (html, FALSE);
+ 
++	/* Setting default value for auto_panning */
++	gtk_html_set_word_char_wrapping (html, FALSE);
++
+ 	/* IM Context */
+ 	html->priv->im_context = gtk_im_multicontext_new ();
+ 	html->priv->need_im_reset = FALSE;
+ 	html->priv->im_block_reset = FALSE;
+ 	html->priv->im_pre_len = 0;
+@@ -6795,5 +6798,15 @@
+ 
+ gboolean gtk_html_get_auto_panning (GtkHTML *html)
+ {
+ 	return html->priv->auto_panning;
+ }
++
++void gtk_html_set_word_char_wrapping (GtkHTML *html, gboolean value)
++{
++	html->priv->word_char_wrapping = value;
++}
++
++gboolean gtk_html_get_word_char_wrapping (GtkHTML *html)
++{
++	return html->priv->word_char_wrapping;
++}
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4-panning/gtkhtml/gtkhtml.h gtkhtml-3.24.4-panning-and-wrap/gtkhtml/gtkhtml.h
+--- gtkhtml-3.24.4-panning/gtkhtml/gtkhtml.h	2009-09-04 18:13:19.000000000 +0200
++++ gtkhtml-3.24.4-panning-and-wrap/gtkhtml/gtkhtml.h	2009-09-08 14:27:21.000000000 +0200
+@@ -380,6 +380,10 @@
+ 
+ /* Configure the custom panning */
+ void	        gtk_html_set_auto_panning (GtkHTML *html, gboolean value);
+ gboolean	gtk_html_get_auto_panning (GtkHTML *html);
+ 
++/* Configure the wrapping policy */
++void            gtk_html_set_word_char_wrapping (GtkHTML *html, gboolean do_word_char_wrap);
++gboolean        gtk_html_get_word_char_wrapping (GtkHTML *html);
++
+ #endif /* _GTKHTML_H_ */
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4-panning/gtkhtml/htmltext.c gtkhtml-3.24.4-panning-and-wrap/gtkhtml/htmltext.c
+--- gtkhtml-3.24.4-panning/gtkhtml/htmltext.c	2008-10-20 05:28:03.000000000 +0200
++++ gtkhtml-3.24.4-panning-and-wrap/gtkhtml/htmltext.c	2009-09-08 15:24:56.000000000 +0200
+@@ -1564,19 +1564,25 @@
+ 	HTMLText *text = HTML_TEXT (self);
+ 	HTMLTextPangoInfo *pi = html_text_get_pango_info (text, painter);
+ 	gint mw = 0, ww;
+ 	gint ii, io, offset, last_offset, line_offset;
+ 	gchar *s;
++	gboolean word_char_wrapping = FALSE;
++
++	if (GTK_IS_HTML (painter->widget)) {
++		word_char_wrapping = gtk_html_get_word_char_wrapping (GTK_HTML (painter->widget));
++	}
++
+ 
+ 	ww = 0;
+ 
+ 	last_offset = offset = 0;
+ 	ii = io = 0;
+ 	line_offset = html_text_get_line_offset (text, painter, 0);
+ 	s = text->text;
+ 	while (offset < text->text_len) {
+-		if (offset > 0 && html_text_is_line_break (pi->attrs [offset]))
++		if (offset > 0 && (word_char_wrapping || html_text_is_line_break (pi->attrs [offset])))
+ 			update_mw (text, painter, offset, &last_offset, &ww, &mw, ii, io, s, line_offset);
+ 
+ 		if (*s == '\t') {
+ 			gint skip = 8 - (line_offset % 8);
+ 			ww += skip*pi->entries [ii].widths [io];
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4-panning/gtkhtml/htmltextslave.c gtkhtml-3.24.4-panning-and-wrap/gtkhtml/htmltextslave.c
+--- gtkhtml-3.24.4-panning/gtkhtml/htmltextslave.c	2009-09-04 14:04:35.000000000 +0200
++++ gtkhtml-3.24.4-panning-and-wrap/gtkhtml/htmltextslave.c	2009-09-08 18:12:37.000000000 +0200
+@@ -377,27 +377,34 @@
+ hts_fit_line (HTMLObject *o, HTMLPainter *painter,
+ 	      gboolean lineBegin, gboolean firstRun, gboolean next_to_floating, gint widthLeft)
+ {
+ 	HTMLTextSlave *slave = HTML_TEXT_SLAVE (o);
+ 	gint lbw, w, lbo, lwl, offset;
++	gint lco, lcw;
+ 	gint ii, io, line_offset;
+-	gchar *s, *lbsp;
++	gchar *s, *lbsp, *lcsp;
+ 	HTMLFitType rv = HTML_FIT_NONE;
+ 	HTMLTextPangoInfo *pi = html_text_get_pango_info (slave->owner, painter);
+ 	gboolean force_fit = lineBegin;
++	GtkWidget *widget;
++	gboolean word_char_wrapping = FALSE;
++
++	if (GTK_IS_HTML (painter->widget)) {
++		word_char_wrapping = gtk_html_get_word_char_wrapping (GTK_HTML (painter->widget));
++	}
+ 
+ 	if (slave->posLen == 0)
+ 		return HTML_FIT_COMPLETE;
+ 
+ 	widthLeft = html_painter_engine_to_pango (painter, widthLeft);
+ 
+-	lbw = lwl = w = 0;
++	lbw = lwl = w = lco = lcw = 0;
+ 	offset = lbo = slave->posStart;
+ 	ii = html_text_get_item_index (slave->owner, painter, offset, &io);
+ 
+ 	line_offset = html_text_get_line_offset (slave->owner, painter, offset);
+-	lbsp = s = html_text_slave_get_text (slave);
++	lbsp = lcsp = s = html_text_slave_get_text (slave);
+ 
+ 	while ((force_fit || widthLeft > lbw) && offset < slave->posStart + slave->posLen) {
+ 		if (offset > slave->posStart && offset > lbo && html_text_is_line_break (pi->attrs [offset]))
+ 			if (update_lb (slave, painter, widthLeft, offset, s, ii, io, line_offset, w, &lwl, &lbw, &lbo, &lbsp, &force_fit))
+ 				break;
+@@ -415,25 +422,38 @@
+ 				face = slave->owner->face;
+ 			}
+ 
+ 			pi->entries [ii].glyph_item.glyphs->glyphs[0].geometry.width = pi->entries [ii].widths [io]
+ 				= skip*html_painter_get_space_width (painter, font_style, face) * PANGO_SCALE;
++
+ 			line_offset += skip;
+ 		} else {
+ 			line_offset ++;
+ 		}
+ 		w += pi->entries [ii].widths [io];
++		if (w < widthLeft) {
++			lco = offset;
++			lcsp = s;
++			lcw = w;
++		}
+ 
+ 		html_text_pi_forward (pi, &ii, &io);
+ 		s = g_utf8_next_char (s);
+ 		offset ++;
+ 	}
+ 
+ 	if (offset == slave->posStart + slave->posLen && (widthLeft >= w || force_fit)) {
+-		rv = HTML_FIT_COMPLETE;
+-		if (slave->posLen)
+-			o->width = html_painter_pango_to_engine (painter, w);
++		if (word_char_wrapping && widthLeft < w && lco > slave->posStart) {
++			split (slave, lco - slave->posStart, 0, lcsp);
++			rv = HTML_FIT_PARTIAL;
++			o->width = html_painter_pango_to_engine (painter, lcw);
++			o->change |= HTML_CHANGE_RECALC_PI;
++		} else {
++			rv = HTML_FIT_COMPLETE;
++			if (slave->posLen)
++				o->width = html_painter_pango_to_engine (painter, w);
++		}
+ 	} else if (lbo > slave->posStart) {
+ 		split (slave, lbo - slave->posStart - lwl, lwl, lbsp);
+ 		rv = HTML_FIT_PARTIAL;
+ 		o->width = html_painter_pango_to_engine (painter, lbw);
+ 		o->change |= HTML_CHANGE_RECALC_PI;

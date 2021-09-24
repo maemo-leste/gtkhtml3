@@ -1,0 +1,195 @@
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4/gtkhtml/gtkhtml-private.h gtkhtml-3.24.4-panning2/gtkhtml/gtkhtml-private.h
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml-private.h	2009-09-08 17:14:11.000000000 +0200
++++ gtkhtml-3.24.4-panning2/gtkhtml/gtkhtml-private.h	2009-09-08 16:50:38.000000000 +0200
+@@ -79,10 +79,20 @@
+ 	char *caret_first_focus_anchor;
+ 
+ 	gboolean allow_dnd;
+ 
+ 	gboolean auto_panning;
++
++	gint last_pointer_x;
++	gint last_pointer_y;
++	gint pointer_change_accum_x;
++	gint pointer_change_accum_y;
++
++	gint last_root_x;
++	gint last_root_y;
++	gint root_change_accum_x;
++	gint root_change_accum_y;
+ };
+ 
+ void  gtk_html_private_calc_scrollbars  (GtkHTML                *html,
+ 					 gboolean               *changed_x,
+ 					 gboolean               *changed_y);
+diff -r -U 5 -x '*.in' -x 'Makefile*' -x 'config*' -x '*.o' -x '*.lo' -x 'stamp*' -x 'lib*' -x '*.orig' -x 'POT*' -x '*zip' -x .deps -x '*.pc' -x 'auto*' -x .libs -x htmlmarshal.c gtkhtml-3.24.4/gtkhtml/gtkhtml.c gtkhtml-3.24.4-panning2/gtkhtml/gtkhtml.c
+--- gtkhtml-3.24.4/gtkhtml/gtkhtml.c	2009-09-08 17:14:11.000000000 +0200
++++ gtkhtml-3.24.4-panning2/gtkhtml/gtkhtml.c	2009-09-08 17:13:14.000000000 +0200
+@@ -1710,24 +1710,46 @@
+ 	HTMLEngine *engine;
+ 	gint x, y;
+ 	guint mouse_double_click_threshold = MOUSE_DBLCLK_THRESHOLD ;
+ 	GtkSettings *gtk_settings = gtk_widget_get_settings (widget) ;
+ 	GtkHTML *html = NULL ;
++	gint orig_x, orig_y;
++	gint pointer_x, pointer_y;
+ 
+ 	if (NULL != gtk_settings)
+ 		g_object_get (G_OBJECT (gtk_settings), "gtk-double-click-distance", &mouse_double_click_threshold, NULL) ;
+ 
+ 	g_return_val_if_fail (widget != NULL, 0);
+ 	g_return_val_if_fail (GTK_IS_HTML (widget), 0);
+ 	g_return_val_if_fail (event != NULL, 0);
+ 
+ 	/* printf ("motion_notify_event\n"); */
+ 
++	gdk_window_get_origin (widget->window, &orig_x, &orig_y);
++	gdk_window_get_pointer (widget->window, &pointer_x, &pointer_y, NULL);
++	GTK_HTML (widget)->priv->root_change_accum_x += ABS (orig_x - GTK_HTML (widget)->priv->last_root_x);
++	GTK_HTML (widget)->priv->root_change_accum_y += ABS (orig_y - GTK_HTML (widget)->priv->last_root_y);
++	GTK_HTML (widget)->priv->last_root_x = orig_x;
++	GTK_HTML (widget)->priv->last_root_y = orig_y;
++	GTK_HTML (widget)->priv->pointer_change_accum_x += ABS (pointer_x - GTK_HTML (widget)->priv->last_pointer_x);
++	GTK_HTML (widget)->priv->pointer_change_accum_y += ABS (pointer_y - GTK_HTML (widget)->priv->last_pointer_y);
++	GTK_HTML (widget)->priv->last_pointer_x = pointer_x;
++	GTK_HTML (widget)->priv->last_pointer_y = pointer_y;
++
+ 	if (GTK_HTML (widget)->priv->dnd_in_progress)
+ 		return TRUE;
+ 
+ 	if (!GTK_HTML (widget)->priv->auto_panning) {
++		GtkAdjustment *adj;
++		html = GTK_HTML (widget);
++		adj = gtk_layout_get_hadjustment(GTK_LAYOUT(widget));
++		html->x_amount_panned += ABS (html->lastx - adj->value);
++		html->lastx = adj->value;
++		adj = gtk_layout_get_vadjustment(GTK_LAYOUT(widget));
++		html->y_amount_panned += ABS (html->lasty - adj->value);
++		html->lasty = adj->value;
++
+ 		return FALSE;
+ 	}
+ 
+ 	widget = shift_to_iframe_parent (widget, &x, &y);
+ 
+@@ -1738,12 +1760,12 @@
+ 	html = GTK_HTML (widget) ;
+ 
+ 	/* If there is only a small motion from the origin and simple 
+ 	   doubleclick is active, abort the motion, otherwise clear simple_dblclick flag */
+ 	if (html->simple_dblclick) {
+-	    if (abs(x - html->selection_x1) <= mouse_double_click_threshold && 
+-		abs(y - html->selection_y1) <= mouse_double_click_threshold)
++	    if (ABS (x - html->selection_x1) <= mouse_double_click_threshold && 
++		ABS (y - html->selection_y1) <= mouse_double_click_threshold)
+ 		return TRUE;
+ 		
+ 	    html->simple_dblclick = FALSE;
+ 	}
+ 	
+@@ -1784,11 +1806,10 @@
+ 		if (ABS (html->x_amount_panned) < mouse_double_click_threshold)
+ 			html->x_amount_panned += (gint)(value - adj->value) ;
+ 		gtk_adjustment_set_value(adj, value);
+ 
+ 	}
+-
+ 	return TRUE;
+ }
+ 
+ 
+ static gboolean
+@@ -1838,17 +1859,20 @@
+ {
+ 	GtkHTML *html;
+ 	GtkWidget *orig_widget = widget;
+ 	HTMLEngine *engine;
+ 	gint value, x, y, xWnd, yWnd;
++	gint pointer_x, pointer_y;
+ 
+ 	/* printf ("button_press_event\n"); */
+ 
+ 	x = event->x;
+ 	y = event->y;
+ 
+-	gdk_window_get_pointer (widget->window, &xWnd, &yWnd, NULL) ;
++	gdk_window_get_pointer (widget->window, &pointer_x, &pointer_y, NULL) ;
++	xWnd = pointer_x;
++	yWnd = pointer_y;
+ 	widget = shift_to_iframe_parent (widget, &x, &y);
+ 	shift_to_iframe_parent (orig_widget, &xWnd, &yWnd) ;
+ 	html   = GTK_HTML (widget);
+ 	engine = html->engine;
+ 
+@@ -1915,12 +1939,28 @@
+ 				adjustment = gtk_layout_get_hadjustment (GTK_LAYOUT (widget));
+ 				html->lastx = xWnd + gtk_adjustment_get_value (adjustment);
+ 				adjustment = gtk_layout_get_vadjustment (GTK_LAYOUT (widget));
+ 				html->lasty = yWnd + gtk_adjustment_get_value (adjustment);
+ 			} else {
++				GtkAdjustment *adjustment = NULL;
+ 				html->in_selection_drag = FALSE;
+ 				html->in_selection = FALSE;
++				gdk_window_get_origin (widget->window, &(html->priv->last_root_x), &(html->priv->last_root_y));
++
++				html->priv->root_change_accum_x = 0;
++				html->priv->root_change_accum_y = 0;
++				html->x_amount_panned = 0;
++				html->y_amount_panned = 0;
++				adjustment = gtk_layout_get_hadjustment (GTK_LAYOUT (widget));
++				html->lastx = gtk_adjustment_get_value (adjustment);
++				adjustment = gtk_layout_get_vadjustment (GTK_LAYOUT (widget));
++				html->lasty = gtk_adjustment_get_value (adjustment);
++
++				html->priv->last_pointer_x = pointer_x;
++				html->priv->last_pointer_y = pointer_y;
++				html->priv->pointer_change_accum_x = 0;
++				html->priv->pointer_change_accum_y = 0;
+ 			}
+ 
+ 			if (html_engine_get_editable (engine)) {
+ 				HTMLObject *obj;
+ 
+@@ -2056,10 +2096,23 @@
+ 	}
+ 
+ 	if (event->button == 1) {
+ 	  guint mouse_double_click_threshold = MOUSE_DBLCLK_THRESHOLD ;
+ 	  GtkSettings *gtk_settings = gtk_widget_get_settings (widget) ;
++	  gint orig_x, orig_y;
++	  gint pointer_x, pointer_y;
++
++	  gdk_window_get_origin (widget->window, &orig_x, &orig_y);
++	  gdk_window_get_pointer (widget->window, &pointer_x, &pointer_y, NULL);
++	  GTK_HTML (widget)->priv->root_change_accum_x += ABS (orig_x - GTK_HTML (widget)->priv->last_root_x);
++	  GTK_HTML (widget)->priv->root_change_accum_y += ABS (orig_y - GTK_HTML (widget)->priv->last_root_y);
++	  GTK_HTML (widget)->priv->last_root_x = orig_x;
++	  GTK_HTML (widget)->priv->last_root_y = orig_y;
++	  GTK_HTML (widget)->priv->pointer_change_accum_x += ABS (pointer_x - GTK_HTML (widget)->priv->last_pointer_x);
++	  GTK_HTML (widget)->priv->pointer_change_accum_y += ABS (pointer_y - GTK_HTML (widget)->priv->last_pointer_y);
++	  GTK_HTML (widget)->priv->last_pointer_x = pointer_x;
++	  GTK_HTML (widget)->priv->last_pointer_y = pointer_y;
+ 
+ 	  if (NULL != gtk_settings)
+ 		  g_object_get (G_OBJECT (gtk_settings), "gtk-double-click-distance", &mouse_double_click_threshold, NULL) ;
+ 
+ 
+@@ -2069,12 +2122,16 @@
+ 		html->in_selection_drag = FALSE;
+ 		/* (TL 18-Nov-05) Stop panning on button release */
+ 		html->panning = FALSE;
+ 
+ 		if (!html->priv->dnd_in_progress
+-		    && ABS (html->x_amount_panned) < mouse_double_click_threshold
+-		    && ABS (html->y_amount_panned) < mouse_double_click_threshold
++		    && ABS (html->x_amount_panned) < mouse_double_click_threshold 
++		    && html->priv->root_change_accum_x < mouse_double_click_threshold / 2
++		    && html->priv->pointer_change_accum_x < mouse_double_click_threshold / 2
++		    && ABS (html->y_amount_panned) < mouse_double_click_threshold 
++		    && html->priv->root_change_accum_y < mouse_double_click_threshold / 2
++		    && html->priv->pointer_change_accum_y < mouse_double_click_threshold / 2
+ 		    && html->pointer_url != NULL && ! html->in_selection
+ 		    && (!gtk_html_get_editable (html) || html->priv->in_url_test_mode)) {
+ 			g_signal_emit (widget,  signals[LINK_CLICKED], 0, html->pointer_url);
+ 			focus_object = html_engine_get_focus_object (html->engine, &focus_object_offset);
+ 			if (HTML_IS_TEXT(focus_object)) {

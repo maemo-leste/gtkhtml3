@@ -1,0 +1,155 @@
+diff --git a/gtkhtml/gtkhtml.c b/gtkhtml/gtkhtml.c
+index edf621e..597d498 100644
+--- a/gtkhtml/gtkhtml.c
++++ b/gtkhtml/gtkhtml.c
+@@ -437,7 +437,7 @@ static void
+ queue_draw (GtkHTML *html)
+ {
+ 	if (html->priv->idle_handler_id == 0)
+-		html->priv->idle_handler_id = g_idle_add (idle_handler, html);
++		html->priv->idle_handler_id = gdk_threads_add_idle (idle_handler, html);
+ }
+ 
+ 
+@@ -680,8 +680,6 @@ scroll_timeout_cb (gpointer data)
+ 	gint x_scroll, y_scroll;
+ 	gint x, y;
+ 
+-	GDK_THREADS_ENTER ();
+-
+ 	widget = GTK_WIDGET (data);
+ 	html = GTK_HTML (data);
+ 	engine = html->engine;
+@@ -725,8 +723,6 @@ scroll_timeout_cb (gpointer data)
+ 	inc_adjustment (vadjustment, html_engine_get_doc_height (html->engine),
+ 			widget->allocation.height, y_scroll);
+ 
+-	GDK_THREADS_LEAVE ();
+-
+ 	return TRUE;
+ }
+ 
+@@ -736,12 +732,10 @@ setup_scroll_timeout (GtkHTML *html)
+ 	if (html->priv->scroll_timeout_id != 0)
+ 		return;
+ 
+-	html->priv->scroll_timeout_id = g_timeout_add (SCROLL_TIMEOUT_INTERVAL,
++	html->priv->scroll_timeout_id = gdk_threads_add_timeout (SCROLL_TIMEOUT_INTERVAL,
+ 						   scroll_timeout_cb, html);
+ 
+-	GDK_THREADS_LEAVE();
+ 	scroll_timeout_cb (html);
+-	GDK_THREADS_ENTER();
+ }
+ 
+ static void
+diff --git a/gtkhtml/htmlengine-edit-cursor.c b/gtkhtml/htmlengine-edit-cursor.c
+index 926856c..84e614c 100644
+--- a/gtkhtml/htmlengine-edit-cursor.c
++++ b/gtkhtml/htmlengine-edit-cursor.c
+@@ -378,7 +378,7 @@ html_engine_setup_blinking_cursor (HTMLEngine *engine)
+ 
+ 	blink_timeout_cb (engine);
+ 	if (blink_timeout > 0)
+-		engine->blinking_timer_id = g_timeout_add (blink_timeout, blink_timeout_cb, engine);
++		engine->blinking_timer_id = gdk_threads_add_timeout (blink_timeout, blink_timeout_cb, engine);
+ 	else
+ 		engine->blinking_timer_id = -1;
+ }
+@@ -417,7 +417,7 @@ html_engine_reset_blinking_cursor (HTMLEngine *engine)
+ 		g_source_remove (engine->blinking_timer_id);
+ 
+ 	if (blink_timeout > 0)
+-		engine->blinking_timer_id = g_timeout_add (blink_timeout, blink_timeout_cb, engine);
++		engine->blinking_timer_id = gdk_threads_add_timeout (blink_timeout, blink_timeout_cb, engine);
+ 	else {
+ 		engine->blinking_timer_id = -1;
+ 		/* show the cursor */
+diff --git a/gtkhtml/htmlengine-edit-selection-updater.c b/gtkhtml/htmlengine-edit-selection-updater.c
+index 9ebf498..5568571 100644
+--- a/gtkhtml/htmlengine-edit-selection-updater.c
++++ b/gtkhtml/htmlengine-edit-selection-updater.c
+@@ -114,7 +114,7 @@ html_engine_edit_selection_updater_schedule (HTMLEngineEditSelectionUpdater *upd
+ 	if (updater->idle_id != 0)
+ 		return;
+ 
+-	updater->idle_id = g_idle_add (updater_idle_callback, updater);
++	updater->idle_id = gdk_threads_add_idle (updater_idle_callback, updater);
+ }
+ 
+ /**
+diff --git a/gtkhtml/htmlengine.c b/gtkhtml/htmlengine.c
+index 954a6cc..f5212fe 100644
+--- a/gtkhtml/htmlengine.c
++++ b/gtkhtml/htmlengine.c
+@@ -4710,7 +4710,7 @@ html_engine_stream_write (GtkHTMLStream *handle,
+ 	html_tokenizer_write (e->ht, buffer, size == -1 ? strlen (buffer) : size);
+ 
+ 	if (e->parsing && e->timerId == 0) {
+-		e->timerId = g_timeout_add (10, (GtkFunction) html_engine_timer_event, e);
++		e->timerId = gdk_threads_add_timeout (10, (GSourceFunc) html_engine_timer_event, e);
+ 	}
+ }
+ 
+@@ -4828,7 +4828,7 @@ html_engine_schedule_update (HTMLEngine *e)
+ 		return;
+ 	DI (printf ("html_engine_schedule_update - timer %d\n", e->updateTimer));
+ 	if (e->updateTimer == 0)
+-		e->updateTimer = g_idle_add ((GtkFunction) html_engine_update_event, e);
++		e->updateTimer = gdk_threads_add_idle ((GSourceFunc) html_engine_update_event, e);
+ }
+ 
+ 
+@@ -5130,7 +5130,7 @@ html_engine_schedule_redraw (HTMLEngine *e)
+ 	else if (e->redraw_idle_id == 0) {
+ 		clear_pending_expose (e);
+ 		html_draw_queue_clear (e->draw_queue);
+-		e->redraw_idle_id = g_idle_add ((GtkFunction) redraw_idle, e);
++		e->redraw_idle_id = gdk_threads_add_idle ((GSourceFunc) redraw_idle, e);
+ 	}
+ }
+ 
+@@ -5337,7 +5337,7 @@ html_engine_parse (HTMLEngine *e)
+ 
+ 	e->avoid_para = FALSE;
+ 
+-	e->timerId = g_idle_add ((GtkFunction) html_engine_timer_event, e);
++	e->timerId = gdk_threads_add_idle ((GSourceFunc) html_engine_timer_event, e);
+ }
+ 
+ 
+@@ -5919,7 +5919,7 @@ html_engine_thaw (HTMLEngine *engine)
+ 	if (engine->freeze_count == 1) {
+ 		if (engine->thaw_idle_id == 0) {
+ 			DF (printf ("queueing thaw_idle %d\n", engine->freeze_count);)
+-			engine->thaw_idle_id = g_idle_add (thaw_idle, engine);
++				engine->thaw_idle_id = gdk_threads_add_idle ((GSourceFunc) thaw_idle, engine);
+ 		}
+ 	} else {
+ 		engine->freeze_count--;
+diff --git a/gtkhtml/htmlimage.c b/gtkhtml/htmlimage.c
+index c87dde0..6c4a8b2 100644
+--- a/gtkhtml/htmlimage.c
++++ b/gtkhtml/htmlimage.c
+@@ -1160,8 +1160,8 @@ html_image_pointer_queue_animation (HTMLImagePointer *ip)
+ 		gdk_pixbuf_animation_iter_advance (ip->iter, NULL);
+ 		delay = gdk_pixbuf_animation_iter_get_delay_time (ip->iter);
+ 
+-		ip->animation_timeout = g_timeout_add (delay,
+-						       (GtkFunction) html_image_pointer_update,
++		ip->animation_timeout = gdk_threads_add_timeout (delay,
++						       (GSourceFunc) html_image_pointer_update,
+ 						       (gpointer) ip);
+ 	}
+ 
+@@ -1317,8 +1317,8 @@ html_image_pointer_new (const gchar *filename, HTMLImageFactory *factory)
+ 	retval->interests = NULL;
+ 	retval->factory = factory;
+ 	retval->stall = FALSE;
+-	retval->stall_timeout = g_timeout_add (STALL_INTERVAL,
+-					       (GtkFunction)html_image_pointer_timeout,
++	retval->stall_timeout = gdk_threads_add_timeout (STALL_INTERVAL,
++					       (GSourceFunc)html_image_pointer_timeout,
+ 					       retval);
+ 	retval->animation_timeout = 0;
+ 	return retval;
