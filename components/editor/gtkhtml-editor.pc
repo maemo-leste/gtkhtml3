@@ -1,0 +1,13 @@
+prefix=/home/stable/opt/gnome
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+gtkhtml_api_version=3.14
+
+Name: gtkhtml-editor
+Description: HTML editor widget
+Requires: libgtkhtml-3.14
+Version: 3.24.4
+Libs: -L${libdir} -lgtkhtml-editor
+Cflags: -I${includedir}/libgtkhtml-3.14/editor
